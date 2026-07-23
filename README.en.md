@@ -7,14 +7,14 @@ GitHub-driven private cloud drive — sync local folders to your private GitHub 
 - **Auto-install dependencies** — detects missing Python packages on startup and pip-installs them
 - **GitHub OAuth login** — one-click browser authorization, no manual token creation
 - **Multi-repo sidebar** — create (private/public)/rename/delete repos; hover for actions; ↻ refresh
-- **File manager** — built-in sidebar to add/delete/rename files; hover to reveal actions; ↻ refresh
+- **File manager** — built-in sidebar to add/delete/rename files; hover to reveal actions; ↻ refreshes file list and checks remote
 - **Drag & drop** — drop files or folders anywhere on the window to copy into current directory
 - **Push/Pull** — Push = local overwrites remote, Pull = remote overwrites local (with timeout)
 - **Smart push** — pushes existing local commits even when no new changes are detected
 - **Commit rollback** — failed pushes automatically undo the local commit
 - **Remote detection** — detects deleted repos and prompts re-initialization
 - **Offline tolerant** — browse local files even when remote is unreachable
-- **Status display** — shows local commits ahead/behind remote in real time
+- **Status display** — shows local commits ahead/behind remote; auto-checks remote on window focus
 - **Large file detection** — scans for files >100 MB and warns before push
 - **Dark/light themes** — toggle with smooth fade, sidebar adapts to theme
 - **Chinese/English** — full bilingual UI with instant language switch
@@ -57,7 +57,7 @@ Dependencies are auto-installed on first launch — no need to `pip install` man
 2. **Select repo** — create a repo from sidebar (+), choose private or public; hover to rename/delete; ↻ to refresh
 3. **Choose folder** — select any local directory (even non-empty), click "Initialize"
 4. **Sync** — edit files directly in File Explorer → click Push to upload; click Pull to overwrite with remote
-5. **Status bar** — shows "N modified" / "N new files" / "ahead by N commits" / "behind by N commits"
+5. **Status bar** — shows "N modified" / "N new files" / "ahead by N commits" / "behind by N commits"; auto-refreshes on window focus
 6. **Tray background** — the app keeps running in the background after closing; right-click the tray icon to quit
 
 ## Tech stack
