@@ -4,7 +4,7 @@ import sys
 
 from pathlib import Path
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtNetwork import QLocalServer
 from PyQt6.QtWidgets import (
@@ -270,6 +270,11 @@ class MainWindow(QMainWindow):
             self.tray_icon.hide()
         QApplication.quit()
 
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
+            self._dashboard.on_window_activated()
+        super().changeEvent(event)
     def closeEvent(self, event):
         event.ignore()
         self._minimize_to_tray()

@@ -47,6 +47,17 @@ class _SyncThread(QThread):
         except Exception as e:
             if not self.cancelled: self.finished.emit(False, str(e))
 
+class _StatusThread(QThread):
+    finished = pyqtSignal(dict)
+    def __init__(self, engine):
+        super().__init__(); self.engine = engine
+    def run(self):
+        try:
+            s = self.engine.get_status()
+            self.finished.emit(s)
+        except Exception:
+            self.finished.emit({"not_ready": True})
+
 class _SetupThread(QThread):
     finished = pyqtSignal(bool, str)
     def __init__(self, repo_name: str, local_path: str, config: dict, config_path: Path):
@@ -345,7 +356,7 @@ class _SyncPage(QWidget, I18nMixin):
         self.btn_root.clicked.connect(self._nav_root); nav.addWidget(self.btn_root)
         nav.addStretch()
         self.btn_refresh_files = QPushButton("\u21bb"); self.btn_refresh_files.setObjectName("btnNavIcon"); self.btn_refresh_files.setFixedSize(26, 26)
-        self.btn_refresh_files.clicked.connect(self._refresh_file_list); nav.addWidget(self.btn_refresh_files)
+        self.btn_refresh_files.clicked.connect(self._refresh_all); nav.addWidget(self.btn_refresh_files)
         self.btn_add = QPushButton("+"); self.btn_add.setStyleSheet("font-size:14px;padding:2px 8px;")
         add_menu = QMenu(self)
         add_menu.addAction(_t("dash.add_file"), self._add_file)
@@ -391,7 +402,7 @@ class _SyncPage(QWidget, I18nMixin):
         if ok:
             self._engine = engine
             if self._engine and self._engine.is_cloned:
-                self._refresh_status(); self._refresh_file_list()
+                self._refresh_status_async(); self._refresh_file_list()
                 if msg:
                     self._log(_t("dash.reconnect_failed", msg))
                 else:
@@ -417,7 +428,7 @@ class _SyncPage(QWidget, I18nMixin):
             except Exception as e: self._log(f"Drop failed: {e}")
         if added_files: self._log(_t("dash.files_added", added_files))
         if added_folders: self._log(_t("dash.folders_added", added_folders))
-        if added_files or added_folders: self._refresh_file_list(); self._refresh_status()
+        if added_files or added_folders: self._refresh_file_list(); self._refresh_status_async()
         return added_files, added_folders
 
     def eventFilter(self, obj, event):
@@ -446,6 +457,10 @@ class _SyncPage(QWidget, I18nMixin):
         self.btn_back.setToolTip(_t("tooltip.back"))
         self.btn_root.setToolTip(_t("tooltip.root"))
         self.btn_refresh_files.setToolTip(_t("tooltip.refresh"))
+    def _refresh_all(self):
+        self._refresh_file_list()
+        self._refresh_status_async(show_overlay=True)
+
     def _refresh_file_list(self):
         self.file_list.clear()
         if not self._root.is_dir(): return
@@ -479,7 +494,7 @@ class _SyncPage(QWidget, I18nMixin):
         try:
             if target.is_dir(): shutil.rmtree(target)
             else: target.unlink()
-            self._refresh_file_list(); self._refresh_status(); self._log(_t("dash.file_deleted", name))
+            self._refresh_file_list(); self._refresh_status_async(); self._log(_t("dash.file_deleted", name))
         except PermissionError:
             QMessageBox.warning(self, _t("dash.error"), _t("dash.delete_denied", str(target)))
         except Exception as e:
@@ -490,7 +505,7 @@ class _SyncPage(QWidget, I18nMixin):
         if not ok or not n or n == old: return
         try:
             (self._cwd / old).rename(self._cwd / n)
-            self._refresh_file_list(); self._refresh_status(); self._log(_t("dash.file_renamed", old, n))
+            self._refresh_file_list(); self._refresh_status_async(); self._log(_t("dash.file_renamed", old, n))
         except Exception as e: QMessageBox.warning(self, _t("dash.error"), str(e))
 
     def _add_file(self):
@@ -504,7 +519,7 @@ class _SyncPage(QWidget, I18nMixin):
                 try: shutil.copy2(f, self._cwd / Path(f).name)
                 except Exception as e: self._log(f"Copy failed: {e}")
             self._sync_stack.setCurrentIndex(0)
-            self._refresh_file_list(); self._refresh_status(); self._log(_t("dash.files_added", len(files)))
+            self._refresh_file_list(); self._refresh_status_async(); self._log(_t("dash.files_added", len(files)))
         except Exception as e:
             self._sync_stack.setCurrentIndex(0)
             self._log(f"Add files failed: {e}")
@@ -520,7 +535,7 @@ class _SyncPage(QWidget, I18nMixin):
             shutil.copytree(src, dest)
             if not any(dest.iterdir()): (dest / ".gitkeep").touch()
             self._sync_stack.setCurrentIndex(0)
-            self._refresh_file_list(); self._refresh_status()
+            self._refresh_file_list(); self._refresh_status_async()
             self._log(_t("dash.folder_copied", Path(src).name))
         except Exception as e:
             self._sync_stack.setCurrentIndex(0)
@@ -558,32 +573,37 @@ class _SyncPage(QWidget, I18nMixin):
             self._log(_t("dash.sync_cancelled"))
         self._sync_stack.setCurrentIndex(0)
         self.btn_pull.setEnabled(True); self.btn_push.setEnabled(True)
-        self.btn_pull.setText(_t("dash.pull")); self.btn_push.setText(_t("dash.push"))
 
     def _on_sync_finished(self, ok: bool, msg: str):
         self._sync_stack.setCurrentIndex(0)
         self.btn_pull.setEnabled(True); self.btn_push.setEnabled(True)
         self.btn_pull.setText(_t("dash.pull")); self.btn_push.setText(_t("dash.push"))
-        if ok: self._log(msg); self._refresh_status(); self._refresh_file_list()
+        if ok: self._log(msg); self._refresh_status_async(); self._refresh_file_list()
         else:
             self._log(_t("dash.sync_failed", msg)); self.lbl_status.setText(_t("dash.sync_failed_short"))
             QMessageBox.warning(self, _t("dash.error"), msg)
         self.lbl_status.setStyleSheet("font-size:12px;")
-    def _refresh_status(self):
+    def _refresh_status_async(self, show_overlay: bool = False):
         if not self._engine or not self._engine.is_cloned: return
-        try:
-            s = self._engine.get_status()
-            if s.get("not_ready"): return
-            self._status_raw = {
-                "changed": len(s.get("changed", [])),
-                "untracked": len(s.get("untracked", [])),
-                "behind": s.get("behind", 0),
-                "ahead": s.get("ahead", 0),
-                "remote_error": s.get("remote_error", False),
-            }
-            self._render_status()
-        except Exception as e:
-            self._log(f"Status refresh failed: {e}")
+        if show_overlay:
+            self._loading_label.setText(_t("dash.checking_remote"))
+            self._cancel_hint.hide()
+            self._loading_movie.start(); self._sync_stack.setCurrentIndex(1)
+        self._status_thread = _StatusThread(self._engine)
+        self._status_thread.finished.connect(self._on_status_fetched)
+        self._status_thread.start()
+
+    def _on_status_fetched(self, s: dict):
+        self._sync_stack.setCurrentIndex(0)
+        if s.get("not_ready"): return
+        self._status_raw = {
+            "changed": len(s.get("changed", [])),
+            "untracked": len(s.get("untracked", [])),
+            "behind": s.get("behind", 0),
+            "ahead": s.get("ahead", 0),
+            "remote_error": s.get("remote_error", False),
+        }
+        self._render_status()
 
     def _render_status(self):
         if not self._status_raw:
@@ -651,6 +671,11 @@ class DashboardWidget(QWidget, I18nMixin):
             self._page_sync.remote_gone.connect(self._on_remote_gone)
         self._stack.setCurrentWidget(self._page_sync)
         self._update_avatar_hint()
+
+    def on_window_activated(self):
+        """Called by MainWindow when the app window gains focus."""
+        if self._page_sync is not None:
+            self._page_sync._refresh_status_async()
     def _on_remote_gone(self):
         """远端仓库已删除 — 清除配置，切回初始化页面。"""
         self._config.pop("repo_full_name", None)
