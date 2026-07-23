@@ -116,7 +116,8 @@ _translations = {
             "  - Drag files or folders onto the window to add them\n"
             "  - Hover over files or repos to reveal rename/delete buttons\n"
             "  - Initializing does NOT auto-pull from remote\n"
-            "  - Git is auto-downloaded on first launch if not installed\n\n"
+            "  - Git is auto-downloaded on first launch if not installed\n"
+            "  - Closing the window minimizes to the system tray; right-click tray icon to quit\n\n"
             "Font: Monocraft by IdreesInc (github.com/IdreesInc/Monocraft)\n"
             "License: MIT"
         ),
@@ -242,7 +243,8 @@ _translations = {
             "  - 点击加载动画可取消正在进行的同步\n"
             "  - 初始化不会自动拉取远端文件\n"
             "  - 点击头像/用户名切换仓库\n"
-            "  - 首次启动若未安装 Git 会自动下载\n\n"
+            "  - 首次启动若未安装 Git 会自动下载\n"
+            "  - 关闭窗口会最小化到系统托盘，右键托盘图标可退出\n\n"
             "字体: Monocraft by IdreesInc (github.com/IdreesInc/Monocraft)\n"
             "许可: MIT"
         ),

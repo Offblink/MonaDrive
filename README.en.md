@@ -19,6 +19,8 @@ GitHub-driven private cloud drive — sync local folders to your private GitHub 
 - **Dark/light themes** — toggle with smooth fade, sidebar adapts to theme
 - **Chinese/English** — full bilingual UI with instant language switch
 - **Git auto-download** — downloads Portable Git on first launch if not installed
+- **System tray resident** — closing the window minimizes to tray; double-click tray icon to restore
+- **Single instance** — launching a second instance wakes the existing window instead of spawning a new process
 - **Secure token storage** — Windows Credential Manager via keyring, never plaintext
 
 ## Install
@@ -56,6 +58,7 @@ Dependencies are auto-installed on first launch — no need to `pip install` man
 3. **Choose folder** — select any local directory (even non-empty), click "Initialize"
 4. **Sync** — edit files directly in File Explorer → click Push to upload; click Pull to overwrite with remote
 5. **Status bar** — shows "N modified" / "N new files" / "ahead by N commits" / "behind by N commits"
+6. **Tray background** — the app keeps running in the background after closing; right-click the tray icon to quit
 
 ## Tech stack
 
@@ -74,6 +77,7 @@ Dependencies are auto-installed on first launch — no need to `pip install` man
 - Token scopes: `repo` and `delete_repo` (read/write + delete)
 - GitHub file size limit: 100 MB per file; ~5 GB per repo
 - Stable internet connection required for sync
+- Closing the window minimizes to the system tray; right-click the tray icon and select "Quit" to fully exit
 - Edit files directly in File Explorer — changes are detected on next Push
 - Initializing does NOT auto-pull from remote; user chooses Push or Pull manually
 - Click the avatar/user name to switch repos or return to main
